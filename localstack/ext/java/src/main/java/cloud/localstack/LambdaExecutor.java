@@ -7,7 +7,9 @@ import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent;
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent.KinesisEventRecord;
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent.Record;
+import com.amazonaws.services.lambda.runtime.events.S3Event;
 import com.amazonaws.services.lambda.runtime.events.SNSEvent;
+import com.amazonaws.services.s3.event.S3EventNotification;
 import com.amazonaws.util.StringInputStream;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -91,8 +93,10 @@ public class LambdaExecutor {
 
 				inputObject = DDBEventParser.parse(records);
 
+			} else if (records.stream().anyMatch(record -> record.containsKey("s3"))) {
+			    inputObject = new S3Event(S3EventNotification.parseJson(fileContent).getRecords());
 			}
-			//TODO: Support other events (S3, SQS...)
+			//TODO: Support other events (SQS...)
 		}
 
 		Context ctx = new LambdaContext();

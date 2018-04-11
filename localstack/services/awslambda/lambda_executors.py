@@ -15,6 +15,7 @@ except ImportError:
 from localstack import config
 from localstack.utils.common import run, TMP_FILES, short_uid, save_file, to_str, cp_r
 from localstack.services.install import INSTALL_PATH_LOCALSTACK_FAT_JAR
+from localstack.config import HOSTNAME_EXTERNAL
 
 # constants
 LAMBDA_EXECUTOR_JAR = INSTALL_PATH_LOCALSTACK_FAT_JAR
@@ -153,7 +154,7 @@ class LambdaExecutorReuseContainers(LambdaExecutorContainers):
 
         # create/verify the docker container is running.
         LOG.debug('Priming docker container with runtime "%s" and arn "%s".', runtime, func_arn)
-        container_info = self.prime_docker_container(runtime, func_arn, env_vars.items(), lambda_cwd)
+        container_info = self.prime_docker_container(runtime, func_arn, env_vars, lambda_cwd)
 
         # Note: currently "docker exec" does not support --env-file, i.e., environment variables can only be
         # passed directly on the command line, using "-e" below. TODO: Update this code once --env-file is
@@ -216,7 +217,7 @@ class LambdaExecutorReuseContainers(LambdaExecutorContainers):
                 # Make sure the container does not exist in any form/state.
                 self.destroy_docker_container(func_arn)
 
-                env_vars_str = ' '.join(['-e {}={}'.format(k, cmd_quote(v)) for (k, v) in env_vars])
+                env_vars_str = ' '.join(['-e {}={}'.format(k, cmd_quote(v)) for (k, v) in env_vars.items()])
 
                 # Create and start the container
                 LOG.debug('Creating container: %s' % container_name)
@@ -225,12 +226,13 @@ class LambdaExecutorReuseContainers(LambdaExecutorContainers):
                     ' --name "%s"'
                     ' --entrypoint /bin/bash'  # Load bash when it starts.
                     ' --interactive'  # Keeps the container running bash.
+                    ' --add-host="%s:%s"'  # HOSTNAME_EXTERNAL:LOCALSTACK_HOSTNAME
                     ' -e AWS_LAMBDA_EVENT_BODY="$AWS_LAMBDA_EVENT_BODY"'
                     ' -e HOSTNAME="$HOSTNAME"'
                     ' -e LOCALSTACK_HOSTNAME="$LOCALSTACK_HOSTNAME"'
-                    '  %s'  # env_vars
+                    '  %s'  # env_vars_str
                     ' lambci/lambda:%s'
-                ) % (container_name, env_vars_str, runtime)
+                ) % (container_name, HOSTNAME_EXTERNAL, env_vars['LOCALSTACK_HOSTNAME'], env_vars_str, runtime)
                 LOG.debug(cmd)
                 run(cmd, stderr=subprocess.PIPE, outfile=subprocess.PIPE)
 
@@ -415,21 +417,25 @@ class LambdaExecutorSeparateContainers(LambdaExecutorContainers):
             cmd = (
                 'CONTAINER_ID="$(docker create'
                 ' %s'
+                ' --add-host="%s:%s"'  # HOSTNAME_EXTERNAL:LOCALSTACK_HOSTNAME
                 ' %s'
                 ' "lambci/lambda:%s" %s'
                 ')";'
                 'docker cp "%s/." "$CONTAINER_ID:/var/task";'
                 'docker start -a "$CONTAINER_ID";'
-            ) % (entrypoint, env_vars_string, runtime, command, lambda_cwd)
+            ) % (entrypoint, HOSTNAME_EXTERNAL, env_vars['LOCALSTACK_HOSTNAME'],
+                env_vars_string, runtime, command, lambda_cwd)
         else:
             lambda_cwd_on_host = self.get_host_path_for_path_in_docker(lambda_cwd)
             cmd = (
                 'docker run'
                 '%s -v "%s":/var/task'
+                ' --add-host="%s:%s"'  # HOSTNAME_EXTERNAL:LOCALSTACK_HOSTNAME
                 ' %s'
                 ' --rm'
                 ' "lambci/lambda:%s" %s'
-            ) % (entrypoint, lambda_cwd_on_host, env_vars_string, runtime, command)
+            ) % (entrypoint, lambda_cwd_on_host, HOSTNAME_EXTERNAL, env_vars['LOCALSTACK_HOSTNAME'],
+                env_vars_string, runtime, command)
         return cmd
 
     def get_host_path_for_path_in_docker(self, path):
