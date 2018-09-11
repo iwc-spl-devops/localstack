@@ -47,7 +47,8 @@ LAMBDA_DEFAULT_HANDLER = 'handler.handler'
 LAMBDA_DEFAULT_RUNTIME = LAMBDA_RUNTIME_PYTHON27
 LAMBDA_DEFAULT_STARTING_POSITION = 'LATEST'
 LAMBDA_DEFAULT_TIMEOUT = 60
-LAMBDA_ZIP_FILE_NAME = 'original_lambda_archive.zip'
+LAMBDA_ZIP_FILE_NAME = '0000-original_lambda_archive.zip'
+LAMBDA_JAR_FILE_NAME = '0000-original_lambda_archive.jar'
 
 app = Flask(APP_NAME)
 
