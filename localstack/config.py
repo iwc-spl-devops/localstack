@@ -81,7 +81,7 @@ def in_docker():
 # determine route to Docker host from container
 DOCKER_BRIDGE_IP = '172.17.0.1'
 try:
-    DOCKER_HOST_FROM_CONTAINER = socket.gethostbyname('docker.for.mac.localhost')
+    DOCKER_HOST_FROM_CONTAINER = socket.gethostbyname('host.docker.internal')
     # update LOCALSTACK_HOSTNAME if docker.for.mac.localhost is available
     if in_docker() and LOCALSTACK_HOSTNAME == DOCKER_BRIDGE_IP:
         LOCALSTACK_HOSTNAME = DOCKER_HOST_FROM_CONTAINER
