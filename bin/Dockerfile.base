@@ -1,4 +1,4 @@
-FROM node:alpine
+FROM node:8-alpine
 
 MAINTAINER Waldemar Hummer (waldemar.hummer@gmail.com)
 LABEL authors="Waldemar Hummer (waldemar.hummer@gmail.com)"
